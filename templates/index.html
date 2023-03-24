@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+</head>
+LOGIN
+<br>
+<body>
+    <form action="/" method="POST">
+        <label>Username:</label>
+        <input type="text" name="username"><br><br>
+        <label>Password:</label>
+        <input type="password" name="password"><br><br>
+        <input type="submit" value="Login">
+     </form>
+    {% if error %}
+    <div style="color: red;" class="alert alert-danger">
+        {{ error }}
+    </div>
+    {% endif %}
+    {% if success_msg %}
+    <div class="alert alert-success" role="alert">
+        {{ success_msg }}
+    </div>
+    {% endif %}
+</body>
+</html>
