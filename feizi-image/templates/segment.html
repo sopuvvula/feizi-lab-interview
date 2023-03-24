@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Uploaded Images</title>
+</head>
+<body>
+   <!-- display canvas with image as background -->
+    {% for img_data in image_data %}
+        <div>
+            <canvas id="canvas{{ loop.index }}" width="500" height="500"></canvas><br>
+        </div>
+        <script>
+            var canvas{{ loop.index }} = document.getElementById("canvas{{ loop.index }}");
+            var ctx{{ loop.index }} = canvas{{ loop.index }}.getContext("2d");
+            var img{{ loop.index }} = new Image();
+            img{{ loop.index }}.onload = function() {
+                canvas{{ loop.index }}.width = img{{ loop.index }}.width;
+                canvas{{ loop.index }}.height = img{{ loop.index }}.height;
+                ctx{{ loop.index }}.drawImage(img{{ loop.index }}, 0, 0);
+            }
+            img{{ loop.index }}.src = "data:image/jpeg;base64,{{ img_data }}";
+        </script>
+        <!-- loop through uploaded images -->
+        {% if not loop.last %}
+            <button onclick="nextImage()">Next</button>
+        {% endif %}
+    {% endfor %}
+    <script>
+        // get canvas and create line object so information can be stored
+        var canvases = document.querySelectorAll('canvas');
+        var curr_idx = 0;
+        var drawing = false;
+        var line = {
+            x1: 0,
+            y1: 0,
+            x2: 0,
+            y2: 0,
+            points: []
+        };
+
+        function addGaussianNoise(canvas) {
+            var ctx = canvas.getContext('2d');
+            var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            var data = imgData.data;
+
+            // define the standard deviation and mean of the noise
+            var stdDev = 30;
+            var mean = 0;
+
+            for (var i = 0; i < data.length; i += 4) {
+               var r = data[i];
+               var g = data[i + 1];
+               var b = data[i + 2];
+
+               // generate a random noise value using a Gaussian distribution
+               var noise = Math.round(getRandomGaussian(mean, stdDev));
+
+               // add the noise value to each color channel
+               r += noise;
+               g += noise;
+               b += noise;
+
+               // make sure color values are in the range 0-255
+               r = Math.max(0, Math.min(255, r));
+               g = Math.max(0, Math.min(255, g));
+               b = Math.max(0, Math.min(255, b));
+
+               // update the image data
+               data[i] = r;
+               data[i + 1] = g;
+               data[i + 2] = b;
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+         }
+
+         // random Gaussian distribution value gen
+         function getRandomGaussian(mean, stdDev) {
+            var u1 = Math.random();
+            var u2 = Math.random();
+            var z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+            return z0 * stdDev + mean;
+         }
+
+
+        function nextImage() {
+            // save the current line data
+            var lineData = JSON.stringify(line.points);
+            localStorage.setItem('lineData' + curr_idx, lineData);
+            // hide the current canvas
+            canvases[curr_idx].style.display = 'none';            
+            // add Gaussian noise to the current canvas
+            addGaussianNoise(canvases[curr_idx]);
+            // move to the next canvas
+            curr_idx++;
+            if (curr_idx >= canvases.length) {
+               curr_idx = 0;
+            }
+            // show the next canvas
+            canvases[curr_idx].style.display = 'block';
+            // reset the line data
+            line = {
+               x1: 0,
+               y1: 0,
+               x2: 0,
+               y2: 0,
+               points: []
+            };
+            
+            // clear the line data on the canvas
+            context.beginPath();
+            context.clearRect(0, 0, canvases[curr_idx].width, canvases[curr_idx].height);
+         }
+
+        function startDrawing(event) {
+            // get mouse starting position
+            var rect = event.target.getBoundingClientRect();
+            var x = event.clientX - rect.left;
+            var y = event.clientY - rect.top;
+            line.x1 = x;
+            line.y1 = y;
+            drawing = true;
+        }
+
+        function endDrawing(event) {
+            // add final point and end drawing
+            drawing = false;
+            line.points.push({ x: line.x2, y: line.y2 });
+        }
+
+        function drawLine(event) {
+            // get mouse position and keep drawing line & storing points data
+            if (drawing) {
+                var rect = event.target.getBoundingClientRect();
+                var x = event.clientX - rect.left;
+                var y = event.clientY - rect.top;
+                var context = event.target.getContext('2d');
+                context.lineTo(x, y);
+                context.stroke();
+                line.x2 = x;
+                line.y2 = y;
+                line.points.push({ x: x, y: y });
+            }
+        }
+        // call necessary function on mouse events
+        canvases.forEach(function(canvas) {
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mouseup', endDrawing);
+            canvas.addEventListener('mousemove', drawLine);
+            canvas.style.display = 'none';
+        });
+
+        canvases[curr_idx].style.display = 'block';
+    </script>
+</body>
+</html>
